@@ -2,9 +2,9 @@ package lazyskiplist
 
 import (
 	"fmt"
+	"github.com/zoyi/skiplist/lib"
 	"math/rand"
 	"sync/atomic"
-	"github.com/zoyi/skiplist/lib"
 )
 
 var (
@@ -33,12 +33,12 @@ func NewLazySkipList(comparator lib.Comparator) *SkipList {
 		maxLevel:   1}
 }
 
-func (list *SkipList) Size() int {
-	return int(list.size)
+func (this *SkipList) Size() int {
+	return int(this.size)
 }
 
 // Choose the new node's level, branching with p (1 / BRANCH) probability, with no regards to N (size of list)
-func (list *SkipList) randomLevel() int {
+func (this *SkipList) randomLevel() int {
 	level := 1
 	for level < MAX_LEVEL && rand.Intn(BRANCH) == 0 {
 		level++
@@ -46,16 +46,94 @@ func (list *SkipList) randomLevel() int {
 	return level
 }
 
-func (list *SkipList) findNode(key interface{}, preds []*Node, succs []*Node) int {
-	lFound := -1
-	pred := list.head
+func (this *SkipList) ceiling(query interface{}) (node *Node) {
+	pred := this.head
 	for lv := MAX_LEVEL - 1; lv >= 0; lv-- {
 		curr := pred.next[lv]
-		for curr != list.tail && list.comparator(key, curr.key) > 0 {
+		for curr != this.tail && this.comparator(query, curr.key) > 0 {
 			pred = curr
 			curr = pred.next[lv]
 		}
-		if lFound == -1 && curr != list.tail && list.comparator(key, curr.key) == 0 {
+
+		if curr != this.tail && (lv == 0 || this.comparator(query, curr.key) == 0) {
+			return curr
+		}
+	}
+	return nil
+}
+
+func (this *SkipList) floor(query interface{}) (node *Node) {
+	pred := this.head
+	for lv := MAX_LEVEL - 1; lv >= 0; lv-- {
+		curr := pred.next[lv]
+		for curr != this.tail && this.comparator(query, curr.key) > 0 {
+			pred = curr
+			curr = pred.next[lv]
+		}
+
+		if curr != this.tail && this.comparator(query, curr.key) == 0 {
+			return curr
+		} else if lv == 0 && pred != this.head {
+			return pred
+		}
+	}
+	return nil
+}
+
+func (this *SkipList) Ceiling(query interface{}) (key, value interface{}, found bool) {
+	if node := this.ceiling(query); node != nil {
+		return node.key, node.value, true
+	}
+	return nil, nil, false
+}
+
+func (this *SkipList) Floor(query interface{}) (key, value interface{}, found bool) {
+	if node := this.floor(query); node != nil {
+		return node.key, node.value, true
+	}
+	return nil, nil, false
+}
+
+func (this *SkipList) Get(key interface{}) (value interface{}, found bool) {
+	pred := this.head
+	for lv := MAX_LEVEL - 1; lv >= 0; lv-- {
+		curr := pred.next[lv]
+		for curr != this.tail && this.comparator(key, curr.key) > 0 {
+			pred = curr
+			curr = pred.next[lv]
+		}
+
+		if curr != this.tail && this.comparator(key, curr.key) == 0 {
+			return curr.value, true
+		}
+	}
+	return nil, false
+}
+
+//
+//func (sl *SkipList) ForwardFetch(query interface{}, size int) (result []KeyValue) {
+//	it := sl.ceiling(query)
+//	if it == nil {
+//		return nil
+//	}
+//
+//	result = make([]KeyValue, 0, size)
+//	for i := 0; i < size && it != sl.tail; i, it = i+1, it.next[0] {
+//		result = append(result, it.KeyValue)
+//	}
+//	return result
+//}
+
+func (this *SkipList) findNode(key interface{}, preds []*Node, succs []*Node) int {
+	lFound := -1
+	pred := this.head
+	for lv := MAX_LEVEL - 1; lv >= 0; lv-- {
+		curr := pred.next[lv]
+		for curr != this.tail && this.comparator(key, curr.key) > 0 {
+			pred = curr
+			curr = pred.next[lv]
+		}
+		if lFound == -1 && curr != this.tail && this.comparator(key, curr.key) == 0 {
 			lFound = lv
 		}
 		preds[lv] = pred
@@ -64,7 +142,7 @@ func (list *SkipList) findNode(key interface{}, preds []*Node, succs []*Node) in
 	return lFound
 }
 
-func (list *SkipList) tryPut(key, value interface{}, level int, preds []*Node, succs []*Node) bool {
+func (this *SkipList) tryPut(key, value interface{}, level int, preds []*Node, succs []*Node) bool {
 	valid := true
 	var prevPred *Node
 	for lv := 0; valid && lv < level; lv++ {
@@ -90,40 +168,44 @@ func (list *SkipList) tryPut(key, value interface{}, level int, preds []*Node, s
 		preds[lv].next[lv] = node
 	}
 
+	succs[0].prev = node
+
 	node.fullyLinked = true
 	return true
 }
 
-func (list *SkipList) Put(key, value interface{}) (original interface{}, replaced bool) {
+func (this *SkipList) Put(key, value interface{}) (original interface{}, replaced bool) {
 
-	level := list.randomLevel()
+	level := this.randomLevel()
 
 	preds := make([]*Node, MAX_LEVEL)
 	succs := make([]*Node, MAX_LEVEL)
 
 	for {
-		lFound := list.findNode(key, preds, succs)
+		lFound := this.findNode(key, preds, succs)
 		if lFound != -1 {
 			nodeFound := succs[lFound]
 			if !nodeFound.marked {
 				for !nodeFound.fullyLinked {
 				}
-				return nodeFound.value, true
+				original := nodeFound.value
+				nodeFound.value = value
+				return original, true
 			}
 			continue
 		}
 
-		if list.tryPut(key, value, level, preds, succs) {
+		if this.tryPut(key, value, level, preds, succs) {
 			break
 		}
 	}
 
-	atomic.AddInt32(&list.size, 1)
+	atomic.AddInt32(&this.size, 1)
 
 	return nil, false
 }
 
-func (list *SkipList) tryRemove(nodeToDelete *Node, preds []*Node, succs []*Node) bool {
+func (this *SkipList) tryRemove(nodeToDelete *Node, preds []*Node, succs []*Node) bool {
 	valid := true
 	var prevPred *Node
 	level := nodeToDelete.getLevel()
@@ -149,13 +231,13 @@ func (list *SkipList) tryRemove(nodeToDelete *Node, preds []*Node, succs []*Node
 	return true
 }
 
-func (list *SkipList) Remove(key interface{}) (value interface{}, removed bool) {
+func (this *SkipList) Remove(key interface{}) (value interface{}, removed bool) {
 	var nodeToDelete *Node = nil
 	isMarked := false
 	preds := make([]*Node, MAX_LEVEL)
 	succs := make([]*Node, MAX_LEVEL)
 	for {
-		lFound := list.findNode(key, preds, succs)
+		lFound := this.findNode(key, preds, succs)
 		if isMarked || (lFound != -1 && okToDelete(succs[lFound], lFound)) {
 			if !isMarked {
 				nodeToDelete = succs[lFound]
@@ -168,14 +250,14 @@ func (list *SkipList) Remove(key interface{}) (value interface{}, removed bool) 
 				isMarked = true
 			}
 
-			if list.tryRemove(nodeToDelete, preds, succs) {
+			if this.tryRemove(nodeToDelete, preds, succs) {
 				break
 			}
 		} else {
 			return nil, false
 		}
 	}
-	atomic.AddInt32(&list.size, -1)
+	atomic.AddInt32(&this.size, -1)
 	return nodeToDelete.value, true
 }
 
@@ -183,10 +265,18 @@ func okToDelete(node *Node, lFound int) bool {
 	return node.fullyLinked && node.getLevel()-1 == lFound && !node.marked
 }
 
-func (list *SkipList) Print() {
+func (list *SkipList) Begin() *Iterator {
+	return &Iterator{list: list, node: list.head.next[0]}
+}
+
+func (list *SkipList) End() *Iterator {
+	return &Iterator{list: list, node: list.tail.prev}
+}
+
+func (this *SkipList) Print() {
 	fmt.Print("[h] ")
 	n := 0
-	for i := list.head.next[0]; n < 100 && i.next[0] != nil; i = i.next[0] {
+	for i := this.head.next[0]; n < 100 && i.next[0] != nil; i = i.next[0] {
 		if cap(i.next) > 1 {
 			fmt.Printf("> [%v(%d)]", i.key, cap(i.next))
 		} else {

@@ -21,5 +21,5 @@ func newNode(key, value interface{}, level int) *Node {
 }
 
 func (node *Node) getLevel() int {
-	return cap(node.next)
+	return len(node.next)
 }
