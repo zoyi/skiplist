@@ -25,6 +25,10 @@ func (it *Iterator) Present() bool {
 	return it.node != it.list.head && it.node != it.list.tail
 }
 
+func (it *Iterator) IsMarked() bool {
+	return it.node.marked
+}
+
 func (it *Iterator) CompareTo(key interface{}) int {
 	return it.list.comparator(it.node.key, key)
 }

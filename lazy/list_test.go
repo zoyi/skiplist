@@ -46,7 +46,42 @@ func TestBackwardIterator(t *testing.T) {
 		slice = append(slice, it.Key().(int))
 	}
 	expected := []int{7, 5, 3, 1}
-	if !reflect.DeepEqual(slice, expected) {
+	if !reflect.DeepEqual(expected, slice) {
 		t.Errorf("Expected: %v, Got: %v", expected, slice)
+	}
+}
+
+func TestForwardIteratorWithDeletedItem(t *testing.T) {
+	list := NewLazySkipList(lib.IntComparator)
+
+	list.Put(1, nil)
+	list.Put(3, nil)
+	list.Put(5, nil)
+	list.Put(7, nil)
+
+	it := list.Begin()
+
+	list.Remove(1)
+	list.Remove(5)
+
+	var slice []int
+	var marked []int
+	for ; it.Present(); it.Next() {
+		slice = append(slice, it.Key().(int))
+		if it.IsMarked() {
+			marked = append(marked, it.Key().(int))
+		}
+	}
+	{
+		expected := []int{1, 3, 7}
+		if !reflect.DeepEqual(expected, slice) {
+			t.Errorf("Expected: %v, Got: %v", expected, slice)
+		}
+	}
+	{
+		expected := []int{1}
+		if !reflect.DeepEqual(marked, expected) {
+			t.Errorf("Expected: %v, Got: %v", expected, marked)
+		}
 	}
 }
