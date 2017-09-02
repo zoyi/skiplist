@@ -15,7 +15,7 @@ func TestPut(t *testing.T) {
 	}
 }
 
-func TestForwardIterator(t *testing.T) {
+func TestIterator(t *testing.T) {
 	list := NewLazySkipList(lib.IntComparator)
 
 	list.Put(1, nil)
@@ -33,7 +33,7 @@ func TestForwardIterator(t *testing.T) {
 	}
 }
 
-func TestBackwardIterator(t *testing.T) {
+func TestReverseIterator(t *testing.T) {
 	list := NewLazySkipList(lib.IntComparator)
 
 	list.Put(1, nil)
@@ -51,7 +51,7 @@ func TestBackwardIterator(t *testing.T) {
 	}
 }
 
-func TestForwardIteratorWithDeletedItem(t *testing.T) {
+func TestIteratorWithDeletedItem(t *testing.T) {
 	list := NewLazySkipList(lib.IntComparator)
 
 	list.Put(1, nil)
