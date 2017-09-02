@@ -24,7 +24,7 @@ func TestIterator(t *testing.T) {
 	list.Put(7, nil)
 
 	var slice []int
-	for it := list.Begin(); it.Present(); it.Next() {
+	for it := list.Begin(nil); it.Present(); it.Next() {
 		slice = append(slice, it.Key().(int))
 	}
 	expected := []int{1, 3, 5, 7}
@@ -42,7 +42,7 @@ func TestReverseIterator(t *testing.T) {
 	list.Put(7, nil)
 
 	var slice []int
-	for it := list.End(); it.Present(); it.Prev() {
+	for it := list.End(nil); it.Present(); it.Prev() {
 		slice = append(slice, it.Key().(int))
 	}
 	expected := []int{7, 5, 3, 1}
@@ -59,7 +59,7 @@ func TestIteratorWithDeletedItem(t *testing.T) {
 	list.Put(5, nil)
 	list.Put(7, nil)
 
-	it := list.Begin()
+	it := list.Begin(nil)
 
 	list.Remove(1)
 	list.Remove(5)
