@@ -20,6 +20,8 @@ type SkipList struct {
 	size       int64
 }
 
+type OnUpdate func(old interface{}) interface{}
+
 func NewLazySkipList(comparator lib.Comparator) *SkipList {
 	head := &Node{next: make([]*Node, MAX_LEVEL)}
 	tail := &Node{next: make([]*Node, MAX_LEVEL), prev: head}
@@ -178,7 +180,10 @@ func (this *SkipList) tryPut(key, value interface{}, level int, preds []*Node, s
 	return true
 }
 
-func (this *SkipList) Put(key, value interface{}) (original interface{}, replaced bool) {
+func (this *SkipList) Put(
+	key, value interface{},
+	onUpdate OnUpdate,
+) (old interface{}, newbie interface{}, replaced bool) {
 
 	level := this.randomLevel()
 
@@ -192,9 +197,14 @@ func (this *SkipList) Put(key, value interface{}) (original interface{}, replace
 			if !nodeFound.marked {
 				for !nodeFound.fullyLinked {
 				}
-				original := nodeFound.value
-				nodeFound.value = value
-				return original, true
+				old = nodeFound.value
+				if onUpdate != nil {
+					newbie = onUpdate(old)
+				} else {
+					newbie = value
+				}
+				nodeFound.value = newbie
+				return old, newbie, true
 			}
 			continue
 		}
@@ -206,7 +216,7 @@ func (this *SkipList) Put(key, value interface{}) (original interface{}, replace
 
 	atomic.AddInt64(&this.size, 1)
 
-	return nil, false
+	return nil, value, false
 }
 
 func (this *SkipList) tryRemove(nodeToDelete *Node, preds []*Node, succs []*Node) bool {

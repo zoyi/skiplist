@@ -8,7 +8,7 @@ import (
 
 func TestPut(t *testing.T) {
 	list := NewLazySkipList(lib.IntComparator)
-	list.Put(1, "test")
+	list.Put(1, "test", nil)
 	value, _ := list.Get(1)
 	if value != "test" {
 		t.Errorf("Expected: %v, Got: %v", "test", value)
@@ -18,10 +18,10 @@ func TestPut(t *testing.T) {
 func TestIterator(t *testing.T) {
 	list := NewLazySkipList(lib.IntComparator)
 
-	list.Put(1, nil)
-	list.Put(3, nil)
-	list.Put(5, nil)
-	list.Put(7, nil)
+	list.Put(1, nil, nil)
+	list.Put(3, nil, nil)
+	list.Put(5, nil, nil)
+	list.Put(7, nil, nil)
 
 	var slice []int
 	for it := list.Begin(nil); it.Present(); it.Next() {
@@ -36,10 +36,10 @@ func TestIterator(t *testing.T) {
 func TestReverseIterator(t *testing.T) {
 	list := NewLazySkipList(lib.IntComparator)
 
-	list.Put(1, nil)
-	list.Put(3, nil)
-	list.Put(5, nil)
-	list.Put(7, nil)
+	list.Put(1, nil, nil)
+	list.Put(3, nil, nil)
+	list.Put(5, nil, nil)
+	list.Put(7, nil, nil)
 
 	var slice []int
 	for it := list.End(nil); it.Present(); it.Prev() {
@@ -54,10 +54,10 @@ func TestReverseIterator(t *testing.T) {
 func TestIteratorWithDeletedItem(t *testing.T) {
 	list := NewLazySkipList(lib.IntComparator)
 
-	list.Put(1, nil)
-	list.Put(3, nil)
-	list.Put(5, nil)
-	list.Put(7, nil)
+	list.Put(1, nil, nil)
+	list.Put(3, nil, nil)
+	list.Put(5, nil, nil)
+	list.Put(7, nil, nil)
 
 	it := list.Begin(nil)
 
